@@ -23,6 +23,8 @@
   "dependencies": {
     "@psychobolt/react-paperjs": "^1.0.0",
     "@psychobolt/react-paperjs-editor": "^0.0.14",
+    "@recogito/react-text-annotator": "^3.0.0-rc.54",
+    "@recogito/recogito-js": "^1.8.4",
     "axios": "^1.6.8",
     "draft-js": "^0.11.6",
     "draft-js-export-html": "^1.4.1",
