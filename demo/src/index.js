@@ -4,8 +4,10 @@ import ReactDOM from "react-dom";
 import mirador from "mirador/dist/es/src/index";
 import annotationPlugins from "../../src";
 import LocalStorageAdapter from "../../src/LocalStorageAdapter";
-import DynamicTextHighlighter from "../../src/DynamicTextHighlighter";
+import TextAnnotatorComponent from "../../src/TextAnnotatorComponent";
 import { Person, Place, Business, Event, Brush } from "@material-ui/icons";
+import { updateWorkspaceMosaicLayout } from "mirador/dist/es/src/state/actions";
+import { getWorkspaceType } from "mirador/dist/es/src/state/selectors";
 
 if (!document.getElementById("root")) {
   const rootDiv = document.createElement("div");
@@ -20,9 +22,11 @@ const config = {
     exportLocalStorageAnnotations: true,
   },
   id: "mirador",
+  selectedTheme: "dark",
   window: {
     defaultSideBarPanel: "annotations",
     sideBarOpenByDefault: true,
+  
   },
   windows: [
     {
@@ -192,7 +196,8 @@ const Main = () => {
     <div
       style={{
         height: "100vh",
-        fontFamily: "Roboto, sans-serif",
+        lineHeight: "3",
+        fontFamily: "Arial, sans-serif",
         display: "flex",
       }}
     >
@@ -203,10 +208,10 @@ const Main = () => {
           borderRight: "1px solid #ccc",
           display: "flex",
           flexDirection: "column",
-          padding: "10px",
+          paddingRight: "10px",
         }}
       >
-        <h3>TEI Text Viewer</h3>
+        {/* <h3>TEI Text Viewer</h3> */}
 
         <input
           type="file"
@@ -218,9 +223,14 @@ const Main = () => {
           }}
           style={{ marginTop: "10px" }}
         />
-        <button onClick={applyNER} disabled={loading}>
-          {loading ? "Processing..." : "Apply NER"}
-        </button>
+        {teiBody ? (
+            <button onClick={applyNER} disabled={loading}>
+            {loading ? "Processing..." : "Apply NER"}
+          </button>
+          ) : (
+            ''
+          )}
+        
         <div
           style={{
             marginTop: "10px",
@@ -245,7 +255,7 @@ const Main = () => {
           {teiBody ? (
             <div dangerouslySetInnerHTML={{ __html: highlightedText }} />
           ) : (
-            <p>No TEI content loaded. Use the buttons above to load text.</p>
+            <TextAnnotatorComponent />
           )}
           {nerResults.length > 0 && (
             <div style={{ marginTop: "20px" }}>
