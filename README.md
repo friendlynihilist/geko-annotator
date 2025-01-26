@@ -1,31 +1,155 @@
-# mirador-annotations
+# GEKO Ekphrastic Annotator
 
-[![Travis][build-badge]][build]
-[![npm package][npm-badge]][npm]
-[![Coveralls][coveralls-badge]][coveralls]
+This repository contains the **GEKO Annotator**, a React-based annotation client designed for ekphrastic studies. It allows users to create semantically enriched annotations on both text and image resources, leveraging **IIIF** for image distribution and **Blazegraph** for storing RDF data in the backend.  
 
-`mirador-multi-level-annotations` is a [Mirador 3](https://github.com/projectmirador/mirador) plugin that adds annotation creation tools to the user interface. Users can` create rectangle, oval, and polygon annotations and add text descriptors. A [live demo](https://mirador-annotations.netlify.app/) that stores annotations in local storage is available for testing. See the [issue queue](https://github.com/ProjectMirador/mirador-annotations/issues) for design proposals for additional functionality.
+The tool implements concepts from the [*General Ekphrastic Ontology (GEkO)*](https://example.org/geko-ontology) and reuses standard ontologies such as **CIDOC-CRM**, **LRMoo**, **HiCO**, and the **W3C Web Annotation Data Model**.
 
-## Installing `mirador-multi-level-annotations`
+## Features
 
-`mirador-multi-level-annotations` requires an instance of Mirador 3. See the [Mirador wiki](https://github.com/ProjectMirador/mirador/wiki) for examples of embedding Mirador within an application. See the [live demo's index.js](https://github.com/ProjectMirador/mirador-annotations/blob/master/demo/src/index.js) for an example of importing the `mirador-annotations` plugin and configuring the adapter.
+- **Semantic Annotations**: Associate textual excerpts and image regions with formal concepts (e.g., rhetorical modalities, conceptual levels, real-world entities).  
+- **IIIF Integration**: Uses the [International Image Interoperability Framework](https://iiif.io/) for standard image requests/responses.  
+- **Blazegraph Storage**: Outputs annotations in JSON-LD or RDF and persists them in a triple store.
+
+---
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Development](#development)
+- [Cantaloupe IIIF Setup](#cantaloupe-iiif-setup)
+- [Blazegraph Setup](#blazegraph-setup)
+- [License](#license)
+
+---
+
+## Prerequisites
+
+1. **Node.js** (v14+ recommended) and **npm** or **yarn** for the React front-end.  
+2. **Cantaloupe IIIF server** (4.x+ recommended) to serve images via IIIF.  
+3. **Blazegraph** (or another SPARQL-capable triple store) to store annotations in RDF.  
+
+---
+
+## Installation
+
+1. **Clone this repository**:
+   ```bash
+   git clone https://github.com/your-username/geko-annotator.git
+   cd geko-annotator
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+   or
+   ```bash
+   yarn
+   ```
+
+3. **Configure environment** (if needed).  
+   - Create a `.env` file with your desired variables (e.g., Blazegraph endpoint URL, IIIF server base URL).
+
+---
 
 ## Development
 
-The prototype is built as an extension of the existing Mirador Annotation plugin and shares its core features and user interface, while incorporating the possibility to produce annotations according to classes and properties specified in the extended data model. In particular, this extension was designed to support multi-level semantic annotations and integrate domain standards such as LRMer, CIDOC-CRM, and HiCO into the JSON-LD model produced through the Mirador annotator. 
-We decided to develop the implementation starting from the same use case considered above so that it would be possible to test the process of creating annotations on palimpsests following the new requirements.
-The architectural design of the Mirador extension was aimed at integrating a dynamic data model capable of supporting additional semantic layers. These enhancements were conceptualised to allow users to interact with multiple levels of semantic annotations directly through the Mirador interface. 
-From a User Interface perspective, five autocomplete select dropdowns were integrated, allowing users to select from a taxonomy or create new entries on the fly. These dropdowns manage various aspects of the annotations such as the selection of the Conceptual Level, Anchor, Referenced Entity, Interpretation Criterion, and Editor. 
-The custom dropdowns dynamically inject extended metadata into the JSON-LD output produced by Mirador. This approach ensures that the enhanced data model integrates with the existing infrastructure without disrupting the user experience.
-The implementation phase involved using React as a framework for the front-end development of the interface and the json-ld processor library to convert JSON-LD into RDF serialisations. The dropdown menus in the user interface were designed to perform CRUD operations on a Blazegraph triplestore via SPARQL and to populate these dropdowns with data retrieved using SPARQL queries. This setup ensures that the annotations are not only stored persistently in a dedicated triple store but are also fully interoperable with other Semantic Web technologies.
-Finally, after having manually created five annotations with different requirements, SPARQL queries based on the Competency Questions were employed to validate the adherence of the model to the extended data schema, specifically testing for the accurate serialisation of multi-level semantic annotations during the annotation process.
+To run the development server with hot reloading:
 
+```bash
+npm start
+```
+or
+```bash
+yarn start
+```
 
-[build-badge]: https://img.shields.io/travis/user/repo/master.png?style=flat-square
-[build]: https://travis-ci.org/user/repo
+- The app will be accessible at [http://localhost:3000](http://localhost:3000).  
+- Make sure your **Cantaloupe server** and **Blazegraph** endpoint are running and **configured** so the annotator can communicate with them (e.g., via environment variables or local config).
 
-[npm-badge]: https://img.shields.io/npm/v/mirador-annotations.png?style=flat-square
-[npm]: https://www.npmjs.org/package/mirador-annotations
+### Building for Production
 
-[coveralls-badge]: https://img.shields.io/coveralls/user/repo/master.png?style=flat-square
-[coveralls]: https://coveralls.io/github/user/repo
+```bash
+npm run build
+```
+or
+```bash
+yarn build
+```
+This will generate a production-ready bundle in the `build/` folder.
+
+---
+
+## Cantaloupe IIIF Setup
+
+The **Cantaloupe** server provides a IIIF interface to your images, so you can annotate them through Mirador or the custom annotator plugin.
+
+1. **Download & Install**  
+   - Obtain the [Cantaloupe WAR or standalone ZIP](https://github.com/medusa-project/cantaloupe).
+   - If using the **standalone** distribution, unpack it somewhere on your server.
+
+2. **Configuration**  
+   - Edit the `cantaloupe.properties` file to set up basics like `HttpSource.basic_auth_username/password` (if needed), cache directory, logging, etc.  
+   - Example snippet:
+     ```properties
+     http.port = 8182
+     logging.level.root = info
+     # ...
+     FilesystemSource.BasicLookupStrategy.path_prefix = /path/to/your/images
+     ```
+
+3. **Run Cantaloupe**  
+   - **Standalone**:
+     ```bash
+     ./cantaloupe.sh
+     ```
+   - **Web application** (Tomcat/Jetty):
+     ```bash
+     cp cantaloupe.war /path/to/tomcat/webapps
+     ```
+4. **Verify** by visiting `http://localhost:8182/info.json` or using the IIIF info URL pattern.  
+5. **Use** the IIIF Image URIs from Cantaloupe in your **GEKO Annotator** so your images load properly.
+
+---
+
+## Blazegraph Setup
+
+**Blazegraph** is a triplestore that can store your JSON-LD annotations as RDF.
+
+1. **Download** the [Blazegraph jar file](https://github.com/blazegraph/database/releases).  
+2. **Run**:
+   ```bash
+   java -jar blazegraph.jar
+   ```
+   By default, it will start on port **9999**:
+   - Admin UI: [http://localhost:9999/blazegraph](http://localhost:9999/blazegraph)  
+
+3. **Create a namespace** (e.g., `geko`)  
+   - In the left panel, click **“Namespaces”** → **Create**.  
+   - Provide a name (e.g. `geko`) and set `quads = true` or `property = spoc`, depending on your preference.  
+4. **Update Endpoint**:  
+   - The SPARQL endpoint will typically be at:
+     ```
+     http://localhost:9999/blazegraph/namespace/geko/sparql
+     ```
+5. **Point** the **GEKO Annotator** to that endpoint.  
+   - In your `.env` or config, set something like:
+     ```bash
+     REACT_APP_BLAZEGRAPH_ENDPOINT=http://localhost:9999/blazegraph/namespace/geko/sparql
+     ```
+   - Ensure your code references `process.env.REACT_APP_BLAZEGRAPH_ENDPOINT` (or similar) for queries/updates.
+
+---
+
+## License
+
+Please see the [LICENSE](./LICENSE) file for details.  
+
+---
+
+### Questions / Issues
+
+If you encounter any bugs or have feature requests, please open an **issue** in this repository.  
+
+**Enjoy ekphrastic annotation!**
