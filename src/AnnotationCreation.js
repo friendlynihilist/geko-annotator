@@ -85,7 +85,7 @@ class AnnotationCreation extends Component {
       activeTool: "cursor",
       closedMode: "closed",
       currentColorType: false,
-      fillColor: null,
+      fillColor: '#43ff6466',
       strokeColor: "#00BFFF",
       strokeWidth: 3,
       ...(props.config.annotation.defaults || {}),
@@ -93,18 +93,17 @@ class AnnotationCreation extends Component {
 
     this.state = {
       ...toolState,
-      conceptualLevel: "Work",
+      conceptualLevel: "Iconographical Level",
       anchorOptions: [
-        "Scriptio Infima",
-        "Scriptio Inferior",
-        "Scriptio Superior",
+        "Mademoiselle Riviére",
+        "Anchor 2"
       ],
       anchorValue: "",
-      entityOptions: ["Manuscript Vat.gr.984", "Manuscript Vat.gr.985"],
+      entityOptions: ["https://www.wikidata.org/wiki/Q24011"],
       entityValue: "",
-      authorOptions: ["D. Surace", "M. F. Bocchi"],
+      authorOptions: ["Author 1"],
       authorValue: "",
-      criterionOptions: ["Diplomatic Transcription", "Paleographic Analysis"],
+      criterionOptions: ["iconographic interpretation", "criterion 2"],
       criterionValue: "",
       annoBody: "",
       colorPopoverOpen: false,
