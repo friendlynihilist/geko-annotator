@@ -21,10 +21,12 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@annotorious/react": "^3.0.20",
     "@psychobolt/react-paperjs": "^1.0.0",
     "@psychobolt/react-paperjs-editor": "^0.0.14",
     "@recogito/react-text-annotator": "^3.0.0-rc.54",
     "@recogito/recogito-js": "^1.8.4",
+    "@recogito/text-annotator": "^3.0.0-rc.54",
     "axios": "^1.6.8",
     "draft-js": "^0.11.6",
     "draft-js-export-html": "^1.4.1",
@@ -48,6 +50,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.10.4",
+    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.18.6",
+    "@babel/plugin-proposal-optional-chaining": "^7.21.0",
     "@babel/preset-env": "^7.10.4",
     "@babel/preset-react": "^7.10.4",
     "@material-ui/core": "^4.11.0",
