@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
-import ReactDOMServer from "react-dom/server";
 import mirador from "mirador/dist/es/src/index";
 import annotationPlugins from "../../src";
 import LocalStorageAdapter from "../../src/LocalStorageAdapter";
@@ -8,13 +7,12 @@ import { v4 as uuidv4 } from "uuid";
 import jsonld from "jsonld";
 
 // 3rd-party imports
-import { Typography, Button, Box, Input } from "@material-ui/core";
+import { Typography, Button, Box } from "@material-ui/core";
 import {
   Person,
-  Place,
+  Brush,
   Business,
   Event,
-  Brush,
   GetApp,
   AccountTree,
   Brightness3,
@@ -47,7 +45,7 @@ const config = {
     exportLocalStorageAnnotations: true,
   },
   id: "mirador",
-  selectedTheme: "dark",
+  selectedTheme: "light",
   window: {
     defaultSideBarPanel: "annotations",
     sideBarOpenByDefault: false,
@@ -56,17 +54,9 @@ const config = {
   windows: [
     {
       loadedManifest:
-        "https://manifest-editor.digirati.services/api/iiif/p3/68f6553ffd28a68b41c51b8fe7e55b6b/1737911405102",
+        "https://iiif.lib.harvard.edu/manifests/drs:491936037",
     },
-    // Uncomment and adapt if you want multiple manifests:
-    // {
-    //   loadedManifest:
-    //     "https://manifest-editor.digirati.services/api/iiif/p3/8f122a3f41f81fbacdbf2d2db98ed29c/1737480078910",
-    // },
   ],
-  workspace: {
-    type: "elastic", // Enables elastic workspace mode
-  },
 };
 
 /** ----------------------------------
@@ -95,9 +85,6 @@ function escapeRegex(str) {
   return str.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
 }
 
-/**
- * Replaces recognized NER entities in the text with styled HTML spans and icons.
- */
 function highlightNER(text, nerResults) {
   if (!text || nerResults.length === 0) return text;
 
@@ -157,28 +144,9 @@ function Main() {
   const [theme, setTheme] = useState("light");
 
   useEffect(() => {
+    // Initialize Mirador inside the right column
     mirador.viewer(config, [...annotationPlugins]);
-
-    // Additional styling overrides for Mirador layout
-    const style = document.createElement("style");
-    style.type = "text/css";
-    style.innerHTML = `
-      .mirador-viewer {
-        left: 50% !important;
-      }
-      .mirador-workspace-viewport {
-        padding-left: 0 !important;
-      }
-      .MuiAppBar-root {
-       
-      }
-    `;
-    document.head.appendChild(style);
   }, []);
-
-  /** ----------------------------------
-   *  TEI PARSING & NER
-   *  ---------------------------------- */
 
   const parseTeiXml = (xmlString) => {
     const parser = new DOMParser();
@@ -193,7 +161,7 @@ function Main() {
 
     setTeiMetadata({ title, author });
     setTeiBody(body);
-    setTeiText(body); // Keep full text for potential NER
+    setTeiText(body);
   };
 
   const loadTeiTextFromFile = (file) => {
@@ -232,9 +200,6 @@ function Main() {
     }
   };
 
-  /** ----------------------------------
-   *  ANNOTATIONS
-   *  ---------------------------------- */
   const handleSaveAnnotations = (newAnnotations) => {
     setAnnotations(newAnnotations);
   };
@@ -247,25 +212,21 @@ function Main() {
     const now = new Date();
 
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+    const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
     const hours = String(now.getHours()).padStart(2, "0");
     const minutes = String(now.getMinutes()).padStart(2, "0");
     const seconds = String(now.getSeconds()).padStart(2, "0");
 
-    // Format as YYYY-MM-DDTnn:nn:nnZ
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
   }
 
   const downloadAnnotations = async () => {
-    // 1) Filter only final Web Annotation objects
     const finalAnnotations = annotations.filter(
       (anno) => anno.type === "Annotation"
     );
 
-    // 2) Clean them by removing or ignoring your highlight fields
     const sanitized = finalAnnotations.map((anno) => {
-      // We do a structured clone or shallow copy
       const clone = { ...anno };
 
       clone.hasEkphrasticModality = {
@@ -299,7 +260,7 @@ function Main() {
         },
       };
 
-      (clone.hasAnchor = {
+      clone.hasAnchor = {
         label: anno.body["anchor"],
         id: `geko:anchor/${formatString(anno.body["anchor"])}`,
         type: "Anchor",
@@ -311,16 +272,17 @@ function Main() {
           id: "https://www.wikidata.org/wiki/Q24011",
           type: "Entity",
         },
-      }),
-        (clone.created = getCurrentDateTime());
+      };
 
-      (clone.creator = {
+      clone.created = getCurrentDateTime();
+
+      clone.creator = {
         id: `geko:creator/${formatString(anno.body["creator"])}`,
         type: "foaf:Person",
         name: anno.body["creator"],
-      }),
-        // Remove highlight data
-        delete clone.body["int-type"];
+      };
+
+      delete clone.body["int-type"];
       delete clone.body["int-criterion"];
       delete clone.body["ekphrastic-modality"];
       delete clone.body["anchor"];
@@ -332,14 +294,11 @@ function Main() {
       delete clone.startOffset;
       delete clone.endOffset;
       delete clone.selectedText;
-      delete clone.tempId; // if it still exists
-
-      console.log(clone);
+      delete clone.tempId;
 
       return clone;
     });
 
-    // 3) Build an AnnotationPage
     const annotationCollection = {
       "@context": [
         "http://www.w3.org/ns/anno.jsonld",
@@ -386,7 +345,7 @@ function Main() {
           Item: "http://iflastandards.info/ns/lrm/lrmoo/F5_Item",
         },
       ],
-      id: `geko:annotation-page/${uuidv4()}`, //"localStorage://?canvasId=example", // etc.
+      id: `geko:annotation-page/${uuidv4()}`,
       type: ["AnnotationCollection", "geko:Ekphrasis"],
       hasForm: {
         id: `geko:form-mimetic`,
@@ -400,18 +359,17 @@ function Main() {
         id: `https://www.wikidata.org/wiki/Q24011`,
         type: "Work",
       },
-      items: sanitized, // your cleaned final annotations
+      items: sanitized,
     };
 
-    // 4) Convert to JSON and download
     const blob = new Blob([JSON.stringify(annotationCollection, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
 
     const rdfData = await toRdf(annotationCollection);
-
     console.log(rdfData);
+
     const link = document.createElement("a");
     link.href = url;
     link.download = "annotations.jsonld";
@@ -421,41 +379,26 @@ function Main() {
   };
 
   async function toRdf(jsonLdData, format = "application/n-quads") {
-      try {
-        // Use the jsonld.toRDF function to convert JSON-LD to a desired RDF format
-        const rdfData = await jsonld.toRDF(jsonLdData, { format: format });
-        return rdfData;
-      } catch (error) {
-        console.error("Error converting JSON-LD to RDF:", error);
-        return null;
-      }
+    try {
+      const rdfData = await jsonld.toRDF(jsonLdData, { format: format });
+      return rdfData;
+    } catch (error) {
+      console.error("Error converting JSON-LD to RDF:", error);
+      return null;
     }
+  }
 
   async function convertJsonLd(collection) {
     try {
-      /**
-       * toRDF can produce either an RDF 'dataset' (JSON object) or an N-Quads string.
-       * We'll specify "application/n-quads" to get a simple text-based output.
-       */
       const nquads = await jsonld.toRDF(collection, {
         format: "application/n-quads",
       });
-
-      // `nquads` is a string in N-Quads syntax (like Turtle but with graph support).
       setRdfResult(nquads);
     } catch (err) {
       console.error("Conversion error:", err);
     }
   }
 
-  /** ----------------------------------
-   *  THEME TOGGLING
-   *  ---------------------------------- */
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
-
-  // After applying NER, we highlight text
   const highlightedText = highlightNER(teiText, nerResults);
 
   return (
@@ -471,14 +414,15 @@ function Main() {
       {/* LEFT COLUMN: TEI Metadata and Content */}
       <div
         style={{
-          flex: 1,
+          width: "40%",
           borderRight: "1px solid #ccc",
           display: "flex",
           flexDirection: "column",
-          paddingRight: "10px",
+          padding: "10px",
+          boxSizing: "border-box",
         }}
       >
-        <Box sx={{ padding: 2, marginBottom: 10, textAlign: "center" }}>
+        <Box sx={{ padding: 2, marginBottom: 2, textAlign: "center" }}>
           <Typography
             variant="h5"
             sx={{
@@ -496,11 +440,10 @@ function Main() {
             justifyContent: "space-between",
             alignItems: "center",
             gap: 2,
+            marginBottom: 2,
           }}
         >
-          {/* Left Buttons */}
           <Box sx={{ display: "flex", flexDirection: "row", gap: 2 }}>
-            {/* Download Button */}
             <Button
               variant="contained"
               color="primary"
@@ -512,64 +455,29 @@ function Main() {
               Download Annotations
             </Button>
 
-            {/* NER Placeholder Button (not calling applyNER yet) */}
             <Button
               variant="outlined"
               sx={{ width: "100px", textTransform: "none" }}
               startIcon={<AccountTree />}
-              onClick={applyNER} // If you want to run NER here
+              onClick={applyNER}
               disabled={!teiBody || loading}
             >
               {loading ? "Processing..." : "NER"}
             </Button>
           </Box>
-
-          {/* Right Buttons: Theme Switch */}
-          <Box sx={{ display: "flex", flexDirection: "row", gap: 2 }}>
-            <Button
-              variant="contained"
-              onClick={() => setTheme("light")}
-              sx={{
-                minWidth: "50px",
-                minHeight: "50px",
-                borderRadius: "50%",
-                backgroundColor: theme === "light" ? "#f0f0f0" : "#666666",
-                color: theme === "light" ? "#121212" : "#ffffff",
-              }}
-            >
-              <Brightness5 />
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => setTheme("dark")}
-              sx={{
-                minWidth: "50px",
-                minHeight: "50px",
-                borderRadius: "50%",
-                backgroundColor: theme === "dark" ? "#666666" : "#f0f0f0",
-                color: theme === "dark" ? "#ffffff" : "#121212",
-              }}
-            >
-              <Brightness3 />
-            </Button>
-          </Box>
         </Box>
 
-        {/* TEI Metadata & Body OR TextAnnotatorComponent */}
         <div
           style={{
-            marginTop: "10px",
+            flex: 1,
             overflow: "auto",
             backgroundColor: "#f9f9f9",
             padding: "10px",
             border: "1px solid #ddd",
-            height: "100%",
           }}
         >
-          {/* If TEI body is loaded, show TEI data; otherwise, show the text annotator */}
           {teiBody ? (
             <>
-              {/* TEI Metadata */}
               {teiMetadata.title && (
                 <div style={{ marginBottom: "20px" }}>
                   <h4>{teiMetadata.title}</h4>
@@ -579,10 +487,8 @@ function Main() {
                 </div>
               )}
 
-              {/* TEI Body with possible NER highlights */}
               <div dangerouslySetInnerHTML={{ __html: highlightedText }} />
 
-              {/* NER Results (if any) */}
               {nerResults.length > 0 && (
                 <div style={{ marginTop: "20px" }}>
                   <h4>NER Results:</h4>
@@ -597,7 +503,6 @@ function Main() {
               )}
             </>
           ) : (
-            /* NO TEI Body? Show the custom text annotator */
             <div style={{ padding: "20px" }}>
               <TextAnnotatorComponent onSave={handleSaveAnnotations} />
             </div>
@@ -606,7 +511,14 @@ function Main() {
       </div>
 
       {/* RIGHT COLUMN: Mirador Viewer */}
-      <div style={{ flex: 1, overflow: "hidden" }}>
+      <div
+        style={{
+          width: "60%",
+          height: "100%",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
         <div id="mirador" style={{ width: "100%", height: "100%" }} />
       </div>
     </div>
